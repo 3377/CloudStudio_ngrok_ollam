@@ -43,15 +43,11 @@
                     "icon": "output",
                     "color": "terminal.ansiYellow",
                     "commands": [
-                        "mkdir -p /workspace/logs",
-                        "touch /workspace/logs/ollama.log /workspace/logs/ngrok.log",
+                        "mkdir -p /workspace/logs && touch /workspace/logs/ollama.log /workspace/logs/ngrok.log",
                         "clear",
                         "echo '正在启动日志监控...\n'",
                         "sleep 5",
-                        "echo '=== Ollama 日志 ===\n'",
-                        "tail -f /workspace/logs/ollama.log 2>&1 | grep -v 'mllama doesn't support parallel requests' & ",
-                        "echo '\n=== Ngrok 日志 ===\n'",
-                        "tail -f /workspace/logs/ngrok.log"
+                        "bash -c '{ echo \"=== Ollama 日志 ===\"; tail -f /workspace/logs/ollama.log | grep -v \"mllama doesn\\\"t support parallel requests\"; } & { echo \"=== Ngrok 日志 ===\"; tail -f /workspace/logs/ngrok.log; } & wait'"
                     ]
                 }
             ]
