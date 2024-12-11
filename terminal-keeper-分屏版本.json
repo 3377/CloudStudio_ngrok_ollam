@@ -1,0 +1,60 @@
+{
+    "$schema": "https://cdn.statically.io/gh/nguyenngoclongdev/cdn/main/schema/v10/terminal-keeper.json",
+    "theme": "tribe",
+    "active": "default",
+    "activateOnStartup": true,
+    "keepExistingTerminals": false,
+    "sessions": {
+        "default": [
+            [
+                {
+                    "name": "Ollama Service",
+                    "autoExecuteCommands": true,
+                    "icon": "server",
+                    "color": "terminal.ansiBlue",
+                    "commands": [
+                        "chmod +x /workspace/start_llama.sh",
+                        "/workspace/start_llama.sh",
+                        "echo '\n=== 常用命令说明 ===\n'",
+                        "echo '1. 服务管理命令：'",
+                        "echo '   查看服务状态：ps aux | grep ollama'",
+                        "echo '   查看服务状态：ps aux | grep ngrok'",
+                        "echo '   停止服务：pkill -f \"ollama\"'",
+                        "echo '   停止服务：pkill -f \"ngrok\"'",
+                        "echo '\n2. 日志查看命令：'",
+                        "echo '   Ollama日志：tail -f /workspace/logs/ollama.log'",
+                        "echo '   Ngrok日志：tail -f /workspace/logs/ngrok.log'",
+                        "echo '\n3. 模型管理命令：'",
+                        "echo '   列出模型：ollama list'",
+                        "echo '   拉取模型：ollama pull <模型名称>'",
+                        "echo '   删除模型：ollama rm <模型名称>'",
+                        "echo '\n4. 其他工具命令：'",
+                        "echo '   查看隧道状态：curl http://localhost:4040/api/tunnels'",
+                        "echo '   显卡监控：watch -n 1 nvidia-smi'",
+                        "echo '   重新安装：rm /root/.ollama_installed'",
+                        "echo '\n5. 快速重启服务：'",
+                        "echo '   编辑配置：vi /workspace/start_llama.sh'",
+                        "echo '   重启服务：/workspace/start_llama.sh\n'"
+                    ]
+                },
+                {
+                    "name": "Service Logs",
+                    "autoExecuteCommands": true,
+                    "icon": "output",
+                    "color": "terminal.ansiYellow",
+                    "commands": [
+                        "mkdir -p /workspace/logs",
+                        "touch /workspace/logs/ollama.log /workspace/logs/ngrok.log",
+                        "clear",
+                        "echo '正在启动日志监控...\n'",
+                        "sleep 5",
+                        "echo '=== Ollama 日志 ===\n'",
+                        "tail -f /workspace/logs/ollama.log 2>&1 | grep -v 'mllama doesn't support parallel requests' & ",
+                        "echo '\n=== Ngrok 日志 ===\n'",
+                        "tail -f /workspace/logs/ngrok.log"
+                    ]
+                }
+            ]
+        ]
+    }
+}
