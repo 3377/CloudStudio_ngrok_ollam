@@ -1,0 +1,2 @@
+# CloudStudio_ngrok_ollam
+可在腾讯云GPU上一键部署ollam的服务，并且远程基于API调用
