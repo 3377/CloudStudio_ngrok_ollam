@@ -11,10 +11,11 @@ set -u  # 使用未定义的变量时报错
 trap 'error_handler $? $LINENO $BASH_LINENO "$BASH_COMMAND" $(printf "::%s" ${FUNCNAME[@]:-})' ERR
 
 # --- 配置参数 (请修改这些参数) ---
-TUNNEL_NAME="tx-openwebui"  # 隧道名称自定义
-DOMAIN_NAME="tx.apt.us.kg" # 你的二级域名，支持多层级
+TUNNEL_NAME="tx-openwebui"  # 隧道名称
+DOMAIN_NAME="tx.apt.us.kg" # 你的二级域名
 LOCAL_PORT="8080"       # 本地服务端口
-API_TOKEN="" # Cloudflare API Token  
+LOCAL_IP="127.0.0.1"   # 本地监听IP，可选：127.0.0.1（仅本机）或 0.0.0.0（所有网卡）
+API_TOKEN="xx" # Cloudflare API Token
 
 # --- 常量定义 ---
 readonly CLOUDFLARED_URL='https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64'
@@ -53,7 +54,7 @@ cleanup_tunnel() {
     local tunnel_id=$1
     print_message "${YELLOW}" "正在清理隧道 ${tunnel_id}..."
     
-    # 先尝试停止所有运行中的进程
+    # 先尝试停止所有运行中的程
     if [[ -f "${PID_FILE}" ]]; then
         local old_pid=$(cat "${PID_FILE}")
         if kill -0 "${old_pid}" 2>/dev/null; then
@@ -105,6 +106,30 @@ cleanup_tunnel() {
     return 0
 }
 
+# --- 函数：显示配置信息 ---
+show_config() {
+    print_message "${BLUE}" "当前配置信息:"
+    echo -e "${GREEN}隧道名称:${RESET} ${TUNNEL_NAME}"
+    echo -e "${GREEN}域名:${RESET} ${DOMAIN_NAME}"
+    echo -e "${GREEN}本地端口:${RESET} ${LOCAL_PORT}"
+    echo -e "${GREEN}本地监听IP:${RESET} ${LOCAL_IP}"
+    echo
+}
+
+# --- 函数：验证配置 ---
+validate_config() {
+    # ���证IP地址格式
+    if [[ ! "${LOCAL_IP}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        print_message "${RED}" "错误: 无效的IP地址格式: ${LOCAL_IP}"
+        exit 1
+    fi
+    
+    # 验证是否是有效的监听地址
+    if [[ "${LOCAL_IP}" != "127.0.0.1" && "${LOCAL_IP}" != "0.0.0.0" ]]; then
+        print_message "${YELLOW}" "警告: 建议使用 127.0.0.1（仅本机）或 0.0.0.0（所有网卡）作为监听地址"
+    fi
+}
+
 # --- 函数：安装和配置 cloudflared ---
 install_cloudflared() {
     # 安装 cloudflared
@@ -154,7 +179,7 @@ install_cloudflared() {
     if [[ ! -z "${EXISTING_TUNNEL}" ]]; then
         print_message "${YELLOW}" "发现同名隧道，正在删除..."
         if ! cleanup_tunnel "${EXISTING_TUNNEL}"; then
-            print_message "${RED}" "无法清理旧隧道，请手动处理或稍后重试"
+            print_message "${RED}" "无法清理旧隧道��请手动处理或稍后重试"
             exit 1
         fi
     fi
@@ -212,7 +237,7 @@ tunnel: ${TUNNEL_ID}
 credentials-file: ${CRED_DIR}/${TUNNEL_ID}.json
 ingress:
   - hostname: ${DOMAIN_NAME}
-    service: http://localhost:${LOCAL_PORT}
+    service: http://${LOCAL_IP}:${LOCAL_PORT}
   - service: http_status:404
 protocol: http2
 metrics: localhost:20241
@@ -299,7 +324,7 @@ EOL
             -H "Content-Type: application/json" >/dev/null 2>&1
     done
 
-    # 创建CNAME记��
+    # 创建CNAME记录
     print_message "${YELLOW}" "正在创建新的DNS记录: ${DOMAIN_NAME} -> ${TUNNEL_ID}.cfargotunnel.com"
     DNS_RESPONSE=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records" \
         -H "Authorization: Bearer ${API_TOKEN}" \
@@ -478,6 +503,11 @@ ${GREEN}配置文件位置:${RESET}
   - 日志文件: ${LOG_FILE}
   - PID文件: ${PID_FILE}
 
+${GREEN}当前配置:${RESET}
+  - 监听地址: ${LOCAL_IP}:${LOCAL_PORT}
+  - 域名: ${DOMAIN_NAME}
+  - 隧道名称: ${TUNNEL_NAME}
+
 ${GREEN}常用命令:${RESET}
   查看隧道状态:
     cloudflared tunnel status
@@ -500,19 +530,22 @@ ${GREEN}故障排除:${RESET}
   
   3. 验证DNS记录:
      dig ${DOMAIN_NAME}
+  
+  4. 检查本地服务:
+     curl -v http://${LOCAL_IP}:${LOCAL_PORT}
 
 ${GREEN}注意事项:${RESET}
   - DNS生效可能需要几分钟时间
-  - 确保本地服务在 ${LOCAL_PORT} 端口正常运行
+  - 确保本地服务在 ${LOCAL_IP}:${LOCAL_PORT} 正常运行
   - 如需修改配置，请编辑 ${CONFIG_DIR}/config.yml
+  - 使用 127.0.0.1 仅允许本机访问
+  - 使用 0.0.0.0 允许所有网卡访问
 
-${YELLOW}如需帮助，请参考:${RESET}
-  https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/"
-  Apitoken权限
-  Account > Cloudflare Tunnel > Edit
-  Account > SSL 和 Certificates > Edit
-  Zone > DNS > Edit
-  Zone > Zone > Read
+${YELLOW}API Tokens权限配置${RESET}
+   Account > Cloudflare Tunnel > Edit
+   Account > SSL and Certificates > Edit
+   Zone > DNS > Edit
+   Zone > Zone > Read"
 }
 
 # --- 函数：清理资源 ---
